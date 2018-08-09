@@ -4,17 +4,18 @@
 from getJwt import GetToken
 from getData import GetData
 from sendData import Sender
+import sys
 
 import requests,json
 
 
 # url地址
-url = 'http://192.168.1.222:8000/servers/23/'
+url = 'http://192.168.1.222:8000/servers/' + sys.argv[1] + '/'
 loginurl = "http://192.168.1.222:8000/login/"
 
 loginData = {
 "username":"daimeng@16feng.com",
-"password":"123456"
+"password":"123.com"
 }
 
 # 请求登录接口获取token

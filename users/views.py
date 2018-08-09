@@ -10,10 +10,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
 from rest_framework import filters
+from rest_framework_jwt.settings import api_settings
+from rest_framework_jwt.views import JSONWebTokenAPIView, jwt_response_payload_handler
+
 from .permissions import IsOwnerOrReadOnly
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.pagination import PageNumberPagination
 
-from rest_framework_jwt.serializers import jwt_encode_handler,jwt_payload_handler
+from rest_framework_jwt.serializers import jwt_encode_handler, jwt_payload_handler, JSONWebTokenSerializer
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
 from .serializers import UserRegSerializer, UserDetailSerializer, UserlogoutSerializer, UserLogsSerializer
@@ -45,6 +49,12 @@ class CustomBackend(ModelBackend):
             return None
 
 
+class Logpagination(PageNumberPagination):
+    page_size = 16
+    page_size_query_param = 'page_size'
+    page_query_param = 'page'
+    max_page_size = 100
+
 class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.RetrieveModelMixin,mixins.DestroyModelMixin, viewsets.GenericViewSet):
     """
     用户
@@ -53,6 +63,10 @@ class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
     # 这里验证身份还加上了DRF自带的Session验证，主要是方便我们使用DRF自带WebAPI界面进行测试
     authentication_classes = (JSONWebTokenAuthentication, authentication.SessionAuthentication)
     permission_classes = (permissions.IsAuthenticated,)
+    pagination_class = Logpagination
+
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username', 'gender','mobile')
 
     def get_serializer_class(self):
         """
@@ -101,6 +115,8 @@ class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         serializer.validated_data["password"] = password
         return serializer.save()
 
+    # def get_object(self):
+    #     return self.request.user
 
 
 # 用户退出记录log使用
@@ -127,11 +143,45 @@ class UserlogoutViewset(mixins.RetrieveModelMixin,viewsets.GenericViewSet):
         logout_done.send(UserlogoutViewset, name= instance.username, content="退出成功", time=time.strftime("%Y-%m-%d %H:%M:%S"))
         return Response(serializer.data)
 
+
+
+
 class UserlogsViewset(mixins.ListModelMixin,viewsets.GenericViewSet):
     authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = UserLogsSerializer
+    pagination_class = Logpagination
     queryset = UserLogs.objects.all()
     filter_backends = (filters.SearchFilter,filters.OrderingFilter)
-    search_fields = ('username', 'action')
+    search_fields = ('username', 'action', 'action_time')
     ordering_fields = ('action_time',)
+
+
+class MyJSONWebToken(JSONWebTokenAPIView):
+    serializer_class = JSONWebTokenSerializer
+
+    # 重载JSONWebTokenAPIView 的post方法，让返回的数据增加user信息
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            user = serializer.object.get('user') or request.user
+            token = serializer.object.get('token')
+            response_dict={
+                'token':token,
+                'user':{
+                    'id':user.id,
+                    'name':user.username
+                }
+
+            }
+            response = Response(response_dict)
+            if api_settings.JWT_AUTH_COOKIE:
+                from datetime import datetime
+                expiration = (datetime.utcnow() +
+                              api_settings.JWT_EXPIRATION_DELTA)
+                response.set_cookie(api_settings.JWT_AUTH_COOKIE,
+                                    token,
+                                    expires=expiration,
+                                    httponly=True)
+            return response

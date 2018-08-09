@@ -1,9 +1,9 @@
-from django.shortcuts import render
+from collections import OrderedDict
 
-# Create your views here.
 from rest_framework import viewsets
 from rest_framework import mixins
 from rest_framework import authentication
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
@@ -17,11 +17,29 @@ from utils.getmac import IP2MAC
 from utils.connectserver import connect_server
 import paramiko, time
 
+from .export import ExportMixin, PcResource
+
 class Pcpagination(PageNumberPagination):
-    page_size = 10
+    page_size = 12
     page_size_query_param = 'page_size'
     page_query_param = 'page'
     max_page_size = 100
+
+class Serverpagination(PageNumberPagination):
+    page_size = 4
+    page_size_query_param = 'page_size'
+    page_query_param = 'page'
+    max_page_size = 100
+
+    # 重载PageNumberPagination类的get_paginated_response方法，让返回的数据增加page_size，前端分页需要用到
+    def get_paginated_response(self, data):
+        return Response(OrderedDict([
+            ('count', self.page.paginator.count),
+            ('next', self.get_next_link()),
+            ('previous', self.get_previous_link()),
+            ('page_size',self.page_size),
+            ('results', data)
+        ]))
 
 class PcViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Pc.objects.all()
@@ -32,9 +50,24 @@ class PcViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateM
 
 
     filter_backends = (filters.SearchFilter,filters.OrderingFilter)
-    search_fields = ('pcuser', 'ip')
+    search_fields = ('pcuser', 'ip','mac','cpu','memory','disk','display','department','note')
     ordering_fields = ('pcuser','ip')
 
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            # result = {}
+            # result['page_size'] = Pcpagination.page_size
+            # result['data'] = serializer.data
+            # return self.get_paginated_response(result)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         """
@@ -59,8 +92,8 @@ class PcViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateM
 
 class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.CreateModelMixin,mixins.UpdateModelMixin,viewsets.GenericViewSet):
     queryset = Server.objects.all()
-    # serializer_class = ServerSerializer
-    pagination_class = Pcpagination
+    pagination_class = Serverpagination
+
     authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
     permission_classes = (IsAuthenticated,)
 
@@ -115,6 +148,7 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
         """
         instance = self.get_object()
         serializer = self.get_serializer(instance)
+        id = instance.id
         ip = instance.ip
         port = instance.port
         username = instance.username
@@ -127,6 +161,19 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
             ssh = paramiko.SSHClient()
             ssh._transport = trans
             # 调用客户端脚本，脚本获取配置后通过patch方法更新server配置信息
-            stdin,stdout,stderr = ssh.exec_command('python CMDBClient/main.py')
+            cmd = 'python CMDBClient/main.py ' + str(id)
+            print(cmd)
+            stdin,stdout,stderr = ssh.exec_command(cmd)
             trans.close()
         return Response(serializer.data)
+
+
+class PcExportView(ExportMixin,GenericAPIView):
+    """
+    PC导出excel功能
+    """
+    serializer_class = Pc
+    queryset = Pc.objects.all()
+    resource_class = PcResource
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('pcuser', 'ip', 'mac', 'cpu', 'memory', 'disk', 'display', 'department', 'note')

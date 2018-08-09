@@ -20,7 +20,10 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views
 from rest_framework_jwt.views import obtain_jwt_token
 from users.views import UserViewset, UserlogoutViewset, UserlogsViewset
-from equipment.views import PcViewset, ServerViewset
+from equipment.views import PcViewset, ServerViewset, PcExportView
+
+from dashboard.views import PcWeight
+from users.views import MyJSONWebToken
 
 router = DefaultRouter()
 router.register(r'users',UserViewset,base_name='users')
@@ -35,7 +38,10 @@ urlpatterns = [
     url(r'docs/', include_docs_urls(title="API文档")),
     url(r'^', include(router.urls)),
     # JWT验证
-    url(r'^login/', obtain_jwt_token),
+    # url(r'^login/', obtain_jwt_token),
+    url(r'^login/',MyJSONWebToken.as_view(),name="login"),
+    url(r'^pcweight/', PcWeight.as_view(), name='pcweight'),
+    url('^export/', PcExportView.as_view()),
 
     # drf 自带的token授权登录，获取token需要向该地址post数据
     url(r'^api-token-auth/',views.obtain_auth_token)
