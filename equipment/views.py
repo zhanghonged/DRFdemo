@@ -11,7 +11,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
-
+from django.dispatch import Signal
 
 from .serializers import PcSerializer,ServerDetailSerializer,ServerRegSerializer
 from .models import Pc,Server
@@ -171,17 +171,21 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
         return Response(serializer.data)
 
 
+
 class PcExportView(ExportMixin,GenericAPIView):
     """
     PC导出excel功能，由于前端angular下载比较麻烦，取消认证
     """
-
     serializer_class = Pc
     queryset = Pc.objects.all()
     resource_class = PcResource
     filter_backends = (filters.SearchFilter,)
     search_fields = ('pcuser', 'ip', 'mac', 'cpu', 'memory', 'disk', 'display', 'department', 'note')
 
+
+
+#定义用户连接server信号
+connect_done = Signal(providing_args=['content','time'])
 
 class ConnectServerView(APIView):
     """
@@ -191,10 +195,14 @@ class ConnectServerView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        gateone_server = 'https://192.168.1.32:443'
+        gateone_server = 'http://192.168.1.32:30096'
         api_key = 'MzAzOWE5YTIxYTk0NDQzOGIxNmJmNjRkMTM1MTk0MTJkM'
         secret = 'MjcyMmYwMzQ3ODVmNDM3M2JmZDlmY2U4ZmM1ZWY0ZmZmN'
         authobj = auth(api_key,secret)
 
         auth_info_and_server = {"url": gateone_server, "auth": authobj}
+
+        server_ip = request._request.GET.get('ip')
+        # 发送连接server的信号
+        connect_done.send(ConnectServerView, content='连接Server:'+server_ip, time=time.strftime("%Y-%m-%d %H:%M:%S"))
         return JsonResponse(auth_info_and_server)

@@ -4,9 +4,12 @@ from django.db.models.signals import post_save, post_delete
 from crequest.middleware import CrequestMiddleware
 from users.views import login_done, logout_done
 from users.views import CustomBackend, UserlogoutViewset
+from equipment.views import ConnectServerView
+from equipment.views import connect_done
 
 from users.models import UserProfile, UserLogs
 from equipment.models import Pc, Server
+from equipment.export import ExportMixin, export_done
 import time
 
 def createlogs(username,action):
@@ -79,3 +82,14 @@ def addpc(sender, instance=None,created=False,**kwargs):
     else:
         action = '更新Server:' + instance.ip
         createlogs(username=current_request.user.username,action=action)
+
+# 连接Server
+@receiver(connect_done, sender=ConnectServerView)
+def connectserver(sender, **kwargs):
+    current_request = CrequestMiddleware.get_request()
+    createlogs(username=current_request.user.username,action=kwargs['content'])
+
+# 导出PC表
+@receiver(export_done, sender=ExportMixin)
+def exportpc(sender, **kwargs):
+    createlogs(username=kwargs['user'], action=kwargs['content'])
