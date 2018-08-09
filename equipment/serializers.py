@@ -27,4 +27,4 @@ class ServerRegSerializer(serializers.ModelSerializer):
                                validators=[UniqueValidator(queryset=Server.objects.all(), message='IP已存在')])
     class Meta:
         model = Server
-        fields = ("ip","port","username","password")
+        fields = ("ip","port","username","password","tag")

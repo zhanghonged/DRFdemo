@@ -20,7 +20,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views
 from rest_framework_jwt.views import obtain_jwt_token
 from users.views import UserViewset, UserlogoutViewset, UserlogsViewset
-from equipment.views import PcViewset, ServerViewset, PcExportView
+from equipment.views import PcViewset, ServerViewset, PcExportView, ConnectServerView
 
 from dashboard.views import PcWeight
 from users.views import MyJSONWebToken
@@ -42,6 +42,7 @@ urlpatterns = [
     url(r'^login/',MyJSONWebToken.as_view(),name="login"),
     url(r'^pcweight/', PcWeight.as_view(), name='pcweight'),
     url('^export/', PcExportView.as_view()),
+    url(r'gateone', ConnectServerView.as_view()),
 
     # drf 自带的token授权登录，获取token需要向该地址post数据
     url(r'^api-token-auth/',views.obtain_auth_token)

@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from collections import OrderedDict
 
 from rest_framework import viewsets
@@ -8,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
 
@@ -16,6 +18,7 @@ from .models import Pc,Server
 from utils.getmac import IP2MAC
 from utils.connectserver import connect_server
 import paramiko, time
+from utils.gateone import auth
 
 from .export import ExportMixin, PcResource
 
@@ -170,10 +173,28 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
 
 class PcExportView(ExportMixin,GenericAPIView):
     """
-    PC导出excel功能
+    PC导出excel功能，由于前端angular下载比较麻烦，取消认证
     """
+
     serializer_class = Pc
     queryset = Pc.objects.all()
     resource_class = PcResource
     filter_backends = (filters.SearchFilter,)
     search_fields = ('pcuser', 'ip', 'mac', 'cpu', 'memory', 'disk', 'display', 'department', 'note')
+
+
+class ConnectServerView(APIView):
+    """
+    连接gateone实现web ssh
+    """
+    authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        gateone_server = 'https://192.168.1.32:443'
+        api_key = 'MzAzOWE5YTIxYTk0NDQzOGIxNmJmNjRkMTM1MTk0MTJkM'
+        secret = 'MjcyMmYwMzQ3ODVmNDM3M2JmZDlmY2U4ZmM1ZWY0ZmZmN'
+        authobj = auth(api_key,secret)
+
+        auth_info_and_server = {"url": gateone_server, "auth": authobj}
+        return JsonResponse(auth_info_and_server)

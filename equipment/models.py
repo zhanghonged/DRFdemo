@@ -33,6 +33,7 @@ class Server(models.Model):
     memory = models.CharField(max_length=32, verbose_name='内存',blank=True,null=True)
     hostname = models.CharField(max_length = 32, verbose_name='主机名',blank=True,null=True)
     mac = models.CharField(max_length=32, verbose_name='MAC地址',blank=True,null=True)
+    tag = models.CharField(max_length=32, verbose_name='标记', blank=True,null=True)
 
     class Meta:
         verbose_name = "Server"
