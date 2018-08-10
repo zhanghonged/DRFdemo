@@ -1,4 +1,3 @@
-from django.http import JsonResponse
 from collections import OrderedDict
 
 from rest_framework import viewsets
@@ -9,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from django.dispatch import Signal
@@ -166,8 +166,6 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
             ssh.close()
         return Response(serializer.data)
 
-
-
 class PcExportView(ExportMixin,GenericAPIView):
     """
     PC导出excel功能，由于前端angular下载比较麻烦，取消认证
@@ -181,11 +179,8 @@ class PcExportView(ExportMixin,GenericAPIView):
     filter_backends = (filters.SearchFilter,)
     search_fields = ('pcuser', 'ip', 'mac', 'cpu', 'memory', 'disk', 'display', 'department', 'note')
 
-
-
 #定义用户连接server信号
 connect_done = Signal(providing_args=['content','time'])
-
 class ConnectServerView(APIView):
     """
     连接gateone实现web ssh
@@ -204,4 +199,4 @@ class ConnectServerView(APIView):
         server_ip = request._request.GET.get('ip')
         # 发送连接server的信号
         connect_done.send(ConnectServerView, content='连接Server:'+server_ip, time=time.strftime("%Y-%m-%d %H:%M:%S"))
-        return JsonResponse(auth_info_and_server)
+        return Response(auth_info_and_server,status=status.HTTP_200_OK)
