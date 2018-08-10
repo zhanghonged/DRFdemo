@@ -121,12 +121,9 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
         # 连接远程主机
         connect = connect_server(ip,int(port),username,password)
         if connect['status'] == 'success':
-            trans = connect['data']
+            ssh = connect['data']
             # 用于文件上传和下载的sftp服务
-            sftp = paramiko.SFTPClient.from_transport(trans)
-            # 远程执行命令服务
-            ssh = paramiko.SSHClient()
-            ssh._transport = trans
+            sftp = ssh.open_sftp()
             # 创建目录
             stdin,stdout,stderr = ssh.exec_command('mkdir CMDBClient')
             time.sleep(1)
@@ -137,9 +134,10 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
             sftp.put('utils/sftpDir/main.py', 'CMDBClient/main.py')
             # 这里不自动调用脚本，改为手动调用
             # stdin,stdout,stderr = ssh.exec_command('python CMDBClient/main.py')
-            trans.close()
+            ssh.close()
             # 连接成功状态记录到数据库
             status = True
+
         else:
             status = False
         serializer.validated_data['status'] = status
@@ -159,15 +157,13 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
         # 连接远程主机
         connect = connect_server(ip,int(port),username,password)
         if connect['status'] == 'success':
-            trans = connect['data']
             # 远程执行命令服务
-            ssh = paramiko.SSHClient()
-            ssh._transport = trans
+            ssh = connect['data']
             # 调用客户端脚本，脚本获取配置后通过patch方法更新server配置信息
             cmd = 'python CMDBClient/main.py ' + str(id)
             print(cmd)
             stdin,stdout,stderr = ssh.exec_command(cmd)
-            trans.close()
+            ssh.close()
         return Response(serializer.data)
 
 
@@ -176,6 +172,9 @@ class PcExportView(ExportMixin,GenericAPIView):
     """
     PC导出excel功能，由于前端angular下载比较麻烦，取消认证
     """
+    authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+
     serializer_class = Pc
     queryset = Pc.objects.all()
     resource_class = PcResource

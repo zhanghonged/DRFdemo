@@ -11,12 +11,14 @@ def connect_server(ip,port,user,password):
     '''
     result = {'status':'error','data':''}
     try:
-        trans = paramiko.Transport(ip,port)
-        trans.connect(username = user, password = password)
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=ip,port=port,username=user,password=password,timeout=1)
+
     except Exception as e:
         result['data'] = str(e)
     else:
         result['status'] = 'success'
-        result['data'] = trans
+        result['data'] = ssh
     finally:
         return result

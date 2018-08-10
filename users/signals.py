@@ -65,6 +65,7 @@ def addpc(sender, instance=None,created=False,**kwargs):
         action = '编辑PC:' + instance.ip
         createlogs(username=current_request.user.username,action=action)
 
+
 # 删除PC
 @receiver(post_delete, sender=Pc)
 def delpc(sender, instance=None, **kwargs):
@@ -74,7 +75,7 @@ def delpc(sender, instance=None, **kwargs):
 
 # 添加编辑Server
 @receiver(post_save,sender=Server)
-def addpc(sender, instance=None,created=False,**kwargs):
+def addserver(sender, instance=None,created=False,**kwargs):
     current_request = CrequestMiddleware.get_request()
     if created:
         action = '添加Server:' + instance.ip
