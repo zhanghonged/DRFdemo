@@ -4,6 +4,7 @@ from rest_framework import viewsets
 from rest_framework import mixins
 from rest_framework import authentication
 from rest_framework.generics import GenericAPIView
+from rest_framework.parsers import FileUploadParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import filters
 from rest_framework.pagination import PageNumberPagination
@@ -13,8 +14,8 @@ from rest_framework.views import APIView
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from django.dispatch import Signal
 
-from .serializers import PcSerializer,ServerDetailSerializer,ServerRegSerializer
-from .models import Pc,Server
+from .serializers import PcSerializer,ServerDetailSerializer,ServerRegSerializer,NetworkEquipmentSerializer, NetworkTopologySerializer
+from .models import Pc,Server,NetworkEquipment, NetworkTopology
 from utils.getmac import IP2MAC
 from utils.connectserver import connect_server
 import paramiko, time
@@ -199,4 +200,30 @@ class ConnectServerView(APIView):
         server_ip = request._request.GET.get('ip')
         # 发送连接server的信号
         connect_done.send(ConnectServerView, content='连接Server:'+server_ip, time=time.strftime("%Y-%m-%d %H:%M:%S"))
-        return Response(auth_info_and_server,status=status.HTTP_200_OK)
+        return Response(auth_info_and_server,status=status.HTTP_200_OK)\
+
+class NetworkEquipmentViewset(mixins.ListModelMixin,
+                              mixins.RetrieveModelMixin,
+                              mixins.CreateModelMixin,
+                              mixins.UpdateModelMixin,
+                              mixins.DestroyModelMixin,
+                              viewsets.GenericViewSet):
+    """
+    网络设备，交换机、路由器等
+    """
+
+    queryset = NetworkEquipment.objects.all()
+    serializer_class = NetworkEquipmentSerializer
+
+    authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+
+class NetworkTopologyViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.CreateModelMixin,viewsets.GenericViewSet):
+    """
+    网络拓扑图
+    """
+    authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
+    permission_classes = (IsAuthenticated,)
+
+    queryset = NetworkTopology.objects.all()
+    serializer_class = NetworkTopologySerializer
