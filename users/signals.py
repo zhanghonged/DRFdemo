@@ -8,7 +8,7 @@ from equipment.views import ConnectServerView
 from equipment.views import connect_done
 
 from users.models import UserProfile, UserLogs
-from equipment.models import Pc, Server
+from equipment.models import Pc, Server, NetworkEquipment, NetworkTopology
 from equipment.export import ExportMixin, export_done
 import time
 
@@ -94,3 +94,30 @@ def connectserver(sender, **kwargs):
 @receiver(export_done, sender=ExportMixin)
 def exportpc(sender, **kwargs):
     createlogs(username=kwargs['user'], action=kwargs['content'])
+
+# 添加编辑网络设备
+@receiver(post_save,sender=NetworkEquipment)
+def addnetwork(sender, instance=None, created=False, **kwargs):
+    current_request = CrequestMiddleware.get_request()
+    if created:
+        action = '添加网络设备:' + instance.eq_ip
+    else:
+        action = '编辑网络设备:' + instance.eq_ip
+    createlogs(username=current_request.user.username,action=action)
+
+# 删除网络设备
+@receiver(post_delete,sender=NetworkEquipment)
+def delnetwork(sender, instance=None, **kwargs):
+    current_request = CrequestMiddleware.get_request()
+    action = '删除网络设备:' + instance.eq_ip
+    createlogs(username=current_request.user.username,action=action)
+
+# 添加网络拓扑图
+@receiver(post_save, sender=NetworkTopology)
+def addtopology(sender, instance=None, created=False, **kwargs):
+    current_request = CrequestMiddleware.get_request()
+    if created:
+        url = str(instance.url)
+        img = url.rsplit('/',1)[1]
+        action = '添加拓扑图' + img
+        createlogs(username=current_request.user.username,action=action)
