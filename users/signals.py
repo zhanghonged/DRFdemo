@@ -7,7 +7,7 @@ from users.views import CustomBackend, UserlogoutViewset
 from equipment.views import ConnectServerView
 from equipment.views import connect_done
 
-from users.models import UserProfile, UserLogs
+from users.models import UserProfile, UserLogs, CmdbGroup
 from equipment.models import Pc, Server, NetworkEquipment, NetworkTopology
 from equipment.export import ExportMixin, export_done
 import time
@@ -42,6 +42,25 @@ def adduser(sender,instance=None,created=False,**kwargs):
 def deluser(sender,instance=None,**kwargs):
     current_request = CrequestMiddleware.get_request()
     action = "删除用户:" + instance.username
+    createlogs(username=current_request.user.username,action=action)
+
+
+# 添加、编辑组成功
+@receiver(post_save,sender=CmdbGroup)
+def addgroup(sender,instance=None,created=False,**kwargs):
+    current_request = CrequestMiddleware.get_request()
+    if created:
+        action = "添加组:" + instance.name
+        createlogs(username=current_request.user.username,action=action)
+    else:
+        action = "编辑组:" + instance.name
+        createlogs(username=current_request.user.username, action=action)
+
+# 删除组成功
+@receiver(post_delete, sender=CmdbGroup)
+def delgroup(sender,instance=None,**kwargs):
+    current_request = CrequestMiddleware.get_request()
+    action = "删除组:" + instance.name
     createlogs(username=current_request.user.username,action=action)
 
 # 用户登录成功信号量

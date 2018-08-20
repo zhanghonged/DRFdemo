@@ -19,7 +19,7 @@ from rest_framework.documentation import include_docs_urls
 from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views
 from rest_framework_jwt.views import obtain_jwt_token
-from users.views import UserViewset, UserlogoutViewset, UserlogsViewset
+from users.views import UserViewset, UserlogoutViewset, UserlogsViewset, CmdbGroupViewset
 from equipment.views import PcViewset, ServerViewset, PcExportView, ConnectServerView, NetworkEquipmentViewset, NetworkTopologyViewset
 
 from dashboard.views import PcWeight
@@ -29,6 +29,7 @@ from django.views.static import serve
 from DRFdemo.settings import MEDIA_ROOT
 
 router = DefaultRouter()
+router.register(r'groups', CmdbGroupViewset, base_name='groups')
 router.register(r'users',UserViewset,base_name='users')
 router.register(r'pc', PcViewset, base_name='pc')
 router.register(r'servers',ServerViewset, base_name='servers')

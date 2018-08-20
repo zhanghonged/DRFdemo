@@ -1,6 +1,3 @@
-from django.shortcuts import render
-
-# Create your views here.
 from django.contrib.auth.backends import ModelBackend
 from django.db.models import Q
 from rest_framework import mixins
@@ -20,8 +17,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework_jwt.serializers import jwt_encode_handler, jwt_payload_handler, JSONWebTokenSerializer
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
-from .serializers import UserRegSerializer, UserDetailSerializer, UserlogoutSerializer, UserLogsSerializer
-from .models import UserLogs
+from .serializers import UserRegSerializer, UserDetailSerializer,UserEditSerializer, UserlogoutSerializer, UserLogsSerializer, CmdbGroupSerializer
+from .models import UserLogs, CmdbGroup
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
@@ -55,6 +52,17 @@ class Logpagination(PageNumberPagination):
     page_query_param = 'page'
     max_page_size = 100
 
+
+class CmdbGroupViewset(viewsets.ModelViewSet):
+    """
+    用户组
+    """
+    queryset = CmdbGroup.objects.all()
+    serializer_class = CmdbGroupSerializer
+    authentication_classes = (JSONWebTokenAuthentication, authentication.SessionAuthentication)
+    permission_classes = (permissions.IsAuthenticated,)
+
+
 class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.RetrieveModelMixin,mixins.DestroyModelMixin, viewsets.GenericViewSet):
     """
     用户
@@ -76,6 +84,8 @@ class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         """
         if self.action == 'create':
             return UserRegSerializer
+        # elif self.action == 'update':
+        #     return UserEditSerializer
         else:
             return UserDetailSerializer
 
@@ -114,6 +124,22 @@ class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         password = make_password(serializer.validated_data['password'])
         serializer.validated_data["password"] = password
         return serializer.save()
+
+    def perform_update(self, serializer):
+        """
+        重载UpdateModelMixin的perform_update方法，使用户修改后的密码加密处理，然后保存数据库
+        """
+        # print(serializer.validated_data)
+        # print(type(serializer.validated_data))
+        if 'password' in serializer.validated_data:
+            password = make_password(serializer.validated_data['password'])
+            serializer.validated_data['password'] = password
+        serializer.save()
+
+
+
+
+
 
     # def get_object(self):
     #     return self.request.user

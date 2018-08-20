@@ -3,6 +3,13 @@ from datetime import datetime
 from django.contrib.auth.models import AbstractUser
 import datetime
 
+class CmdbGroup(models.Model):
+    name = models.CharField(max_length=32,verbose_name='组名称')
+    description = models.TextField(verbose_name='组描述',blank=True,null=True)
+
+    def __str__(self):
+        return self.name
+
 class UserProfile(AbstractUser): #继承AbstractUser
     """
     用户表
@@ -16,6 +23,7 @@ class UserProfile(AbstractUser): #继承AbstractUser
     gender = models.CharField(max_length=6, choices=GENDER_CHOICES, default="female", verbose_name="性别")
     mobile = models.CharField(max_length=11, null=True, blank=True, verbose_name="电话")
     email = models.EmailField(max_length=100, verbose_name="邮箱")
+    group = models.ForeignKey(CmdbGroup, null=True, blank=True, on_delete=models.SET_NULL, verbose_name='组名')
 
     class Meta:
         verbose_name = "用户"
@@ -23,6 +31,7 @@ class UserProfile(AbstractUser): #继承AbstractUser
 
     def __str__(self):
         return self.username
+
 
 class UserLogs(models.Model):
     """

@@ -6,17 +6,28 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 from DRFdemo.settings import REGEX_EMAIL
-from .models import UserLogs
+from .models import UserLogs, CmdbGroup
 
+
+class CmdbGroupSerializer(serializers.ModelSerializer):
+    """
+    用户组序列化类
+    """
+    class Meta:
+        model = CmdbGroup
+        fields = "__all__"
 
 class UserDetailSerializer(serializers.ModelSerializer):
     """
     用户详情序列化类
     """
-
+    password = serializers.CharField(style={'input_type': 'password'}, label="密码", write_only=True,
+                                     help_text="string密码")
+    group = serializers.PrimaryKeyRelatedField(required=True, queryset=CmdbGroup.objects.all())
+    group_display = serializers.CharField(source="group.name", read_only=True)
     class Meta:
         model = User
-        fields = ("id","username","gender","birthday","mobile","email")
+        fields = ("id","username","password","gender","birthday","mobile","email","group","group_display")
 
 class UserRegSerializer(serializers.ModelSerializer):
     """
@@ -29,6 +40,8 @@ class UserRegSerializer(serializers.ModelSerializer):
                                      help_text="string用户名")
 
     password = serializers.CharField(style={'input_type':'password'},label="密码",write_only=True,help_text="string密码")
+
+    group = serializers.PrimaryKeyRelatedField(required=True, queryset=CmdbGroup.objects.all())
 
     def validate_username(self, username):
         """
@@ -63,7 +76,14 @@ class UserRegSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username","password")
+        fields = ("username","password","group")
+
+
+class UserEditSerializer(serializers.ModelSerializer):
+    """
+    用户更新序列化
+    """
+
 
 class UserlogoutSerializer(serializers.ModelSerializer):
     """
