@@ -1,6 +1,8 @@
 import datetime
 
 from django.db import models
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 # Create your models here.
 
@@ -14,6 +16,7 @@ class Pc(models.Model):
     display = models.CharField(max_length=32, verbose_name='显示器',blank=True,null=True)
     department = models.CharField(max_length=32,verbose_name='部门',blank=True,null=True)
     note = models.CharField(max_length=32,verbose_name='备注',blank=True,null=True)
+    owner = models.ForeignKey(User, related_name='pcs', default=None,verbose_name='所属用户',blank=True,null=True)
     class Meta:
         verbose_name = "PC"
         verbose_name_plural = verbose_name

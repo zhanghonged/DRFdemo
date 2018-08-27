@@ -1,25 +1,24 @@
+from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 from django.db.models import Q
-from rest_framework import mixins
-from rest_framework import viewsets
 from rest_framework import authentication
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework import permissions
 from rest_framework import filters
-from rest_framework_jwt.settings import api_settings
-from rest_framework_jwt.views import JSONWebTokenAPIView, jwt_response_payload_handler
-
-from .permissions import IsOwnerOrReadOnly
-from rest_framework.authentication import TokenAuthentication
+from rest_framework import mixins
+from rest_framework import permissions
+from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
-
-from rest_framework_jwt.serializers import jwt_encode_handler, jwt_payload_handler, JSONWebTokenSerializer
+from rest_framework.response import Response
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
+from rest_framework_jwt.serializers import jwt_encode_handler, jwt_payload_handler, JSONWebTokenSerializer
+from rest_framework_jwt.settings import api_settings
+from rest_framework_jwt.views import JSONWebTokenAPIView
+from utils.permissions import IsAdminOrReadOnly
 
-from .serializers import UserRegSerializer, UserDetailSerializer,UserEditSerializer, UserlogoutSerializer, UserLogsSerializer, CmdbGroupSerializer
 from .models import UserLogs, CmdbGroup
-from django.contrib.auth import get_user_model
+from .serializers import UserRegSerializer, UserDetailSerializer, UserlogoutSerializer, UserLogsSerializer, \
+    CmdbGroupSerializer
+
 User = get_user_model()
 
 from django.contrib.auth.base_user import make_password
@@ -60,7 +59,8 @@ class CmdbGroupViewset(viewsets.ModelViewSet):
     queryset = CmdbGroup.objects.all()
     serializer_class = CmdbGroupSerializer
     authentication_classes = (JSONWebTokenAuthentication, authentication.SessionAuthentication)
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (IsAdminOrReadOnly,)
+
 
 
 class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.RetrieveModelMixin,mixins.DestroyModelMixin, viewsets.GenericViewSet):
@@ -68,9 +68,13 @@ class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
     用户
     """
     queryset = User.objects.all()
+
+    # def get_queryset(self):
+    #     return User.objects.filter(username = self.request.user.username)
+
     # 这里验证身份还加上了DRF自带的Session验证，主要是方便我们使用DRF自带WebAPI界面进行测试
     authentication_classes = (JSONWebTokenAuthentication, authentication.SessionAuthentication)
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (IsAdminOrReadOnly,)
     pagination_class = Logpagination
 
     filter_backends = (filters.SearchFilter,)
@@ -84,20 +88,18 @@ class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         """
         if self.action == 'create':
             return UserRegSerializer
-        # elif self.action == 'update':
-        #     return UserEditSerializer
         else:
             return UserDetailSerializer
 
 
-    def get_permissions(self):
-        """
-        除了注册用户外，其他动作都需要权限验证:
-        """
-        if self.action == "create":
-            return []
-        else:
-            return [permissions.IsAuthenticated(),]
+    # def get_permissions(self):
+    #     """
+    #     除了注册用户外，其他动作都需要权限验证:
+    #     """
+    #     if self.action == "create":
+    #         return []
+    #     else:
+    #         return [permissions.IsAuthenticated(),]
 
 
     def create(self, request, *args, **kwargs):
@@ -136,11 +138,6 @@ class UserViewset(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
             serializer.validated_data['password'] = password
         serializer.save()
 
-
-
-
-
-
     # def get_object(self):
     #     return self.request.user
 
@@ -152,7 +149,7 @@ logout_done = Signal(providing_args=['name','content','time'])
 
 class UserlogoutViewset(mixins.RetrieveModelMixin,viewsets.GenericViewSet):
     authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
-    permission_classes = (permissions.IsAuthenticated,)
+    # permission_classes = (permissions.IsAuthenticated,)
 
     serializer_class = UserlogoutSerializer
 
@@ -197,7 +194,8 @@ class MyJSONWebToken(JSONWebTokenAPIView):
                 'token':token,
                 'user':{
                     'id':user.id,
-                    'name':user.username
+                    'name':user.username,
+                    'group':user.group.name
                 }
 
             }

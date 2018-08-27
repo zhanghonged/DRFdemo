@@ -7,6 +7,7 @@ User = get_user_model()
 
 from DRFdemo.settings import REGEX_EMAIL
 from .models import UserLogs, CmdbGroup
+from equipment.serializers import PcSerializer
 
 
 class CmdbGroupSerializer(serializers.ModelSerializer):
@@ -25,6 +26,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
                                      help_text="string密码")
     group = serializers.PrimaryKeyRelatedField(required=True, queryset=CmdbGroup.objects.all())
     group_display = serializers.CharField(source="group.name", read_only=True)
+
+    # pcs = PcSerializer(many=True)
+
     class Meta:
         model = User
         fields = ("id","username","password","gender","birthday","mobile","email","group","group_display")
@@ -77,13 +81,6 @@ class UserRegSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("username","password","group")
-
-
-class UserEditSerializer(serializers.ModelSerializer):
-    """
-    用户更新序列化
-    """
-
 
 class UserlogoutSerializer(serializers.ModelSerializer):
     """

@@ -8,6 +8,7 @@ class PcSerializer(serializers.ModelSerializer):
     ip = serializers.CharField(max_length=32,required=True,
                                validators=[UniqueValidator(queryset=Pc.objects.all(),message="IP已存在")]
                                )
+    ownername = serializers.CharField(source="owner.username",read_only=True)
     class Meta:
         model = Pc
         fields = "__all__"

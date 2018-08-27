@@ -1,27 +1,27 @@
+import time
 from collections import OrderedDict
 
-from rest_framework import viewsets
-from rest_framework import mixins
+from django.dispatch import Signal
 from rest_framework import authentication
-from rest_framework.generics import GenericAPIView
-from rest_framework.parsers import FileUploadParser
-from rest_framework.permissions import IsAuthenticated
 from rest_framework import filters
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
+from rest_framework import mixins
 from rest_framework import status
+from rest_framework import viewsets
+from rest_framework.generics import GenericAPIView
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
-from django.dispatch import Signal
 
-from .serializers import PcSerializer,ServerDetailSerializer,ServerRegSerializer,NetworkEquipmentSerializer, NetworkTopologySerializer
-from .models import Pc,Server,NetworkEquipment, NetworkTopology
-from utils.getmac import IP2MAC
+from utils.permissions import IsOwnerOrReadOnly, IsAdminOrReadOnly
 from utils.connectserver import connect_server
-import paramiko, time
 from utils.gateone import auth
-
+from utils.getmac import IP2MAC
 from .export import ExportMixin, PcResource
+from .models import Pc, Server, NetworkEquipment, NetworkTopology
+from .serializers import PcSerializer, ServerDetailSerializer, ServerRegSerializer, NetworkEquipmentSerializer, NetworkTopologySerializer
+
 
 class Pcpagination(PageNumberPagination):
     page_size = 12
@@ -50,7 +50,8 @@ class PcViewset(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateM
     serializer_class = PcSerializer
     pagination_class = Pcpagination
     authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsOwnerOrReadOnly,)
+    # permission_classes = (IsAuthenticated,)
 
 
     filter_backends = (filters.SearchFilter,filters.OrderingFilter)
@@ -99,7 +100,7 @@ class ServerViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.Creat
     pagination_class = Serverpagination
 
     authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAdminOrReadOnly,)
 
     filter_backends = (filters.SearchFilter, )
     search_fields = ('ip','username')
@@ -216,14 +217,14 @@ class NetworkEquipmentViewset(mixins.ListModelMixin,
     serializer_class = NetworkEquipmentSerializer
 
     authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAdminOrReadOnly,)
 
 class NetworkTopologyViewset(mixins.ListModelMixin,mixins.RetrieveModelMixin,mixins.CreateModelMixin,viewsets.GenericViewSet):
     """
     网络拓扑图
     """
     authentication_classes = (JSONWebTokenAuthentication,authentication.SessionAuthentication)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAdminOrReadOnly,)
 
     queryset = NetworkTopology.objects.all()
     serializer_class = NetworkTopologySerializer
